@@ -1,0 +1,17 @@
+export const initialData = {
+  users: [],
+  places: [],
+  campaigns: [],
+  applications: [],
+  agreements: [],
+  reels: [],
+  comments: [],
+  likes: [],
+  saves: [],
+  visitedPlaces: [],
+  notifications: [],
+  messages: [],
+  creatorStats: [],
+  businessStats: [],
+  currentUser: null,
+}

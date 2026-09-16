@@ -1,36 +1,54 @@
-import { useState } from 'react'
-import AppLayout from './components/common/AppLayout'
-import Home from './pages/Home'
-import Explore from './pages/Explore'
-import MapPage from './pages/MapPage'
-import Profile from './pages/Profile'
+import { useEffect, useState } from 'react'
+import { useAuth } from './context/AuthContext'
+import { initialData } from './data/initialData'
+import { initializeData } from './services/storage'
+import Login from './pages/auth/Login'
+import Signup from './pages/auth/Signup'
+import NormalHome from './pages/normal/NormalHome'
+import CreatorHome from './pages/creator/CreatorHome'
+import BusinessHome from './pages/business/BusinessHome'
 
 function App() {
-  const [currentPage, setCurrentPage] = useState('home')
+  const { currentUser } = useAuth()
+  const [authPage, setAuthPage] = useState('login')
 
-  function renderPage() {
-    if (currentPage === 'explore') {
-      return <Explore />
+  useEffect(() => {
+    initializeData(initialData)
+  }, [])
+
+  if (!currentUser) {
+    if (authPage === 'signup') {
+      return (
+        <div>
+          <Signup />
+
+          <button onClick={() => setAuthPage('login')}>
+            Already have an account? Login
+          </button>
+        </div>
+      )
     }
 
-    if (currentPage === 'map') {
-      return <MapPage />
-    }
+    return (
+      <div>
+        <Login />
 
-    if (currentPage === 'profile') {
-      return <Profile />
-    }
-
-    return <Home />
+        <button onClick={() => setAuthPage('signup')}>
+          Create a new account
+        </button>
+      </div>
+    )
   }
 
-  return (
-    <AppLayout
-      currentPage={currentPage}
-      setCurrentPage={setCurrentPage}
-    >
-      {renderPage()}
-    </AppLayout>
+  if (currentUser.role === 'creator') {
+  return <CreatorHome />
+}
+
+if (currentUser.role === 'business') {
+  return <BusinessHome />
+}
+
+return <NormalHome /></div>
   )
 }
 
