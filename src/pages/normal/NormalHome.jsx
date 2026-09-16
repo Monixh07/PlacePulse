@@ -1,18 +1,58 @@
-import { useAuth } from '../../context/AuthContext'
+import { useState } from 'react'
+import AppLayout from '../../components/common/AppLayout'
+import Home from '../Home'
+import Explore from '../Explore'
+import Profile from '../Profile'
+import Reels from '../Reels'
+import Messages from '../Messages'
+import PlaceDetails from '../PlaceDetails'
 
 function NormalHome() {
-  const { currentUser, logout } = useAuth()
+  const [currentPage, setCurrentPage] = useState('home')
+  const [selectedPlace, setSelectedPlace] = useState(null)
+
+  const handleOpenPlace = (place) => {
+    setSelectedPlace(place)
+  }
+
+  const handleNavigate = (page) => {
+    setSelectedPlace(null)
+    setCurrentPage(page)
+  }
+
+  function renderContent() {
+    if (selectedPlace) {
+      return (
+        <PlaceDetails
+          place={selectedPlace}
+          onBack={() => setSelectedPlace(null)}
+        />
+      )
+    }
+
+    if (currentPage === 'reels') {
+      return <Reels onOpenPlace={handleOpenPlace} />
+    }
+    if (currentPage === 'explore') {
+      return <Explore onOpenPlace={handleOpenPlace} />
+    }
+    if (currentPage === 'messages') {
+      return <Messages />
+    }
+    if (currentPage === 'profile') {
+      return <Profile onOpenPlace={handleOpenPlace} onNavigate={handleNavigate} />
+    }
+
+    return <Home onOpenPlace={handleOpenPlace} />
+  }
 
   return (
-    <div style={{ padding: '24px' }}>
-      <h1>Explorer</h1>
-      <p>Welcome, {currentUser.name}</p>
-      <p>Discover places and travel content.</p>
-
-      <button onClick={logout}>
-        Logout
-      </button>
-    </div>
+    <AppLayout
+      currentPage={selectedPlace ? '' : currentPage}
+      setCurrentPage={handleNavigate}
+    >
+      {renderContent()}
+    </AppLayout>
   )
 }
 

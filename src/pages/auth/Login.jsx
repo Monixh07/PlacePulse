@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
+import { MapPin } from 'lucide-react'
 
-function Login() {
+function Login({ onSwitchToSignup }) {
   const { login } = useAuth()
 
   const [email, setEmail] = useState('')
@@ -12,12 +13,12 @@ function Login() {
     event.preventDefault()
 
     const result = login(
-  email.trim().toLowerCase(),
-  password
-)
+      email.trim().toLowerCase(),
+      password
+    )
 
     if (result.success) {
-      setMessage('Login successful')
+      setMessage('')
     } else {
       setMessage(result.message)
     }
@@ -26,8 +27,18 @@ function Login() {
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <h1>Welcome to PlacePulse</h1>
-        <p>Login to continue</p>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: 'var(--color-primary)', marginBottom: '8px' }}>
+          <MapPin size={28} />
+          <span style={{ fontSize: '24px', fontWeight: 800 }}>PlacePulse</span>
+        </div>
+        <h1>Welcome Back</h1>
+        <p>Discover Places. Create. Promote.</p>
+
+        {message && (
+          <div style={{ padding: '10px', background: '#fee2e2', color: '#dc2626', borderRadius: '8px', fontSize: '13px', marginBottom: '14px' }}>
+            {message}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit}>
           <div className="input-group">
@@ -52,12 +63,24 @@ function Login() {
             />
           </div>
 
-          <button type="submit">
-            Login
+          <button type="submit" className="btn btn-primary btn-block" style={{ marginTop: '8px' }}>
+            Log In
           </button>
         </form>
 
-        {message && <p>{message}</p>}
+        <div style={{ marginTop: '16px', padding: '10px', background: 'var(--color-surface)', borderRadius: '8px', fontSize: '12px', color: 'var(--color-text-secondary)', textAlign: 'left' }}>
+          <strong style={{ display: 'block', marginBottom: '4px', color: 'var(--color-text)' }}>Demo Credentials:</strong>
+          <div>• Creator: <code>creator@test.com</code> / <code>password123</code></div>
+          <div>• Business: <code>business@test.com</code> / <code>password123</code></div>
+          <div>• Explorer: <code>explorer@test.com</code> / <code>password123</code></div>
+        </div>
+
+        <div className="auth-footer">
+          Don&apos;t have an account?
+          <button type="button" onClick={onSwitchToSignup}>
+            Sign Up
+          </button>
+        </div>
       </div>
     </div>
   )

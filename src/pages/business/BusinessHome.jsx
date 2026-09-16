@@ -1,18 +1,62 @@
-import { useAuth } from '../../context/AuthContext'
+import { useState } from 'react'
+import AppLayout from '../../components/common/AppLayout'
+import Home from '../Home'
+import Explore from '../Explore'
+import Reels from '../Reels'
+import Messages from '../Messages'
+import PlaceDetails from '../PlaceDetails'
+import BusinessDashboard from './BusinessDashboard'
 
 function BusinessHome() {
-  const { currentUser, logout } = useAuth()
+  const [currentPage, setCurrentPage] = useState('home')
+  const [selectedPlace, setSelectedPlace] = useState(null)
+
+  const handleOpenPlace = (place) => {
+    setSelectedPlace(place)
+  }
+
+  const handleNavigate = (page) => {
+    setSelectedPlace(null)
+    setCurrentPage(page)
+  }
+
+  function renderContent() {
+    if (selectedPlace) {
+      return (
+        <PlaceDetails
+          place={selectedPlace}
+          onBack={() => setSelectedPlace(null)}
+          onCreateCampaign={() => {
+            setSelectedPlace(null)
+            setCurrentPage('profile')
+          }}
+        />
+      )
+    }
+
+    if (currentPage === 'reels') {
+      return <Reels onOpenPlace={handleOpenPlace} />
+    }
+    if (currentPage === 'explore') {
+      return <Explore onOpenPlace={handleOpenPlace} />
+    }
+    if (currentPage === 'messages') {
+      return <Messages />
+    }
+    if (currentPage === 'profile') {
+      return <BusinessDashboard onOpenPlace={handleOpenPlace} />
+    }
+
+    return <Home onOpenPlace={handleOpenPlace} />
+  }
 
   return (
-    <div style={{ padding: '24px' }}>
-      <h1>Business Dashboard</h1>
-      <p>Welcome, {currentUser.name}</p>
-      <p>Create places and promotional campaigns.</p>
-
-      <button onClick={logout}>
-        Logout
-      </button>
-    </div>
+    <AppLayout
+      currentPage={selectedPlace ? '' : currentPage}
+      setCurrentPage={handleNavigate}
+    >
+      {renderContent()}
+    </AppLayout>
   )
 }
 

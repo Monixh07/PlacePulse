@@ -2,24 +2,50 @@ import { getData, saveData } from './storage'
 
 export function signup(userData) {
   const data = getData()
+  data.users = data.users || []
 
-  const existingUser = data.users.find(
-    (user) => user.email === userData.email
-  )
+  const cleanEmail = userData.email?.trim().toLowerCase()
+  const cleanUsername = (
+    userData.username?.trim().toLowerCase() ||
+    cleanEmail.split('@')[0]
+  ).replace(/[^a-z0-9_]/g, '')
 
-  if (existingUser) {
+  const existingEmail = data.users.find((user) => user.email === cleanEmail)
+  if (existingEmail) {
     return {
       success: false,
-      message: 'Email already registered',
+      message: 'Email already registered. Please login instead.',
+    }
+  }
+
+  const existingUsername = data.users.find((user) => user.username === cleanUsername)
+  if (existingUsername) {
+    return {
+      success: false,
+      message: 'Username is already taken. Please choose another.',
     }
   }
 
   const newUser = {
-    id: Date.now().toString(),
-    ...userData,
+    id: 'user_' + Date.now().toString(),
+    name: userData.name?.trim() || 'User',
+    username: cleanUsername,
+    email: cleanEmail,
+    password: userData.password,
+    role: userData.role || 'normal',
+    phone: userData.phone?.trim() || '',
+    bio: userData.bio?.trim() || (userData.role === 'creator' ? 'Travel Creator on PlacePulse' : userData.role === 'business' ? 'Business & Tourism Promoter' : 'Travel Explorer'),
+    profileImage: userData.profileImage?.trim() || '',
+    // Initial zero statistics for all new accounts
+    followers: 0,
+    following: 0,
+    creatorScore: userData.role === 'creator' ? 75 : 0,
+    earnings: 0,
+    createdAt: new Date().toISOString(),
   }
 
   data.users.push(newUser)
+  data.currentUser = newUser
   saveData(data)
 
   return {
@@ -30,11 +56,10 @@ export function signup(userData) {
 
 export function login(email, password) {
   const data = getData()
+  const cleanEmail = email?.trim().toLowerCase()
 
-  const user = data.users.find(
-    (item) =>
-      item.email === email &&
-      item.password === password
+  const user = (data.users || []).find(
+    (item) => item.email === cleanEmail && item.password === password
   )
 
   if (!user) {
@@ -44,6 +69,9 @@ export function login(email, password) {
     }
   }
 
+  data.currentUser = user
+  saveData(data)
+
   return {
     success: true,
     user,
@@ -52,20 +80,17 @@ export function login(email, password) {
 
 export function saveCurrentUser(user) {
   const data = getData()
-
   data.currentUser = user
   saveData(data)
 }
 
 export function getCurrentUser() {
   const data = getData()
-
   return data?.currentUser || null
 }
 
 export function clearCurrentUser() {
   const data = getData()
-
   data.currentUser = null
   saveData(data)
 }

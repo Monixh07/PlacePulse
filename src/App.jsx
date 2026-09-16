@@ -4,9 +4,7 @@ import { initialData } from './data/initialData'
 import { initializeData } from './services/storage'
 import Login from './pages/auth/Login'
 import Signup from './pages/auth/Signup'
-import NormalHome from './pages/normal/NormalHome'
-import CreatorHome from './pages/creator/CreatorHome'
-import BusinessHome from './pages/business/BusinessHome'
+import AppHome from './pages/AppHome'
 
 function App() {
   const { currentUser } = useAuth()
@@ -18,38 +16,13 @@ function App() {
 
   if (!currentUser) {
     if (authPage === 'signup') {
-      return (
-        <div>
-          <Signup />
-
-          <button onClick={() => setAuthPage('login')}>
-            Already have an account? Login
-          </button>
-        </div>
-      )
+      return <Signup onSwitchToLogin={() => setAuthPage('login')} />
     }
 
-    return (
-      <div>
-        <Login />
-
-        <button onClick={() => setAuthPage('signup')}>
-          Create a new account
-        </button>
-      </div>
-    )
+    return <Login onSwitchToSignup={() => setAuthPage('signup')} />
   }
 
-  if (currentUser.role === 'creator') {
-  return <CreatorHome />
-}
-
-if (currentUser.role === 'business') {
-  return <BusinessHome />
-}
-
-return <NormalHome /></div>
-  )
+  return <AppHome />
 }
 
 export default App

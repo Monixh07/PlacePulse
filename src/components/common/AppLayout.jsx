@@ -4,7 +4,7 @@ import BottomNav from './BottomNav'
 function AppLayout({ children, currentPage, setCurrentPage }) {
   return (
     <div className="app-layout">
-      <Navbar />
+      <Navbar onNavigate={setCurrentPage} />
 
       <main className="app-content">
         {children}
