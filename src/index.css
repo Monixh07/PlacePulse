@@ -259,7 +259,10 @@ button:disabled {
     color: var(--color-text-secondary);
     font-size: 12px;
   }
-
+  
+  .bottom-nav button.active {
+   color: var(--color-primary);
+}
   .bottom-nav button:hover {
     background: transparent;
     color: var(--color-primary);
@@ -287,5 +290,56 @@ button:disabled {
 @media (max-width: 768px) {
   .app-test {
     padding: var(--space-lg) var(--space-md) 90px;
+  }
+}
+.app-layout {
+  min-height: 100vh;
+  background: var(--color-background);
+}
+
+.app-content {
+  width: 100%;
+  min-height: calc(100vh - 64px);
+}
+.page-test {
+  max-width: var(--max-content-width);
+  margin: 0 auto;
+  padding: var(--space-xl);
+}
+
+.page-test h1 {
+  margin-bottom: var(--space-sm);
+}
+
+.page-test p {
+  color: var(--color-text-secondary);
+}
+.page-container {
+  width: 100%;
+  max-width: var(--max-content-width);
+  margin: 0 auto;
+  padding: var(--space-lg);
+}
+
+.page-title {
+  margin-bottom: var(--space-lg);
+  color: var(--color-text);
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.page-description {
+  margin-bottom: var(--space-lg);
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 768px) {
+  .page-container {
+    padding: var(--space-md);
+    padding-bottom: 90px;
+  }
+
+  .page-title {
+    font-size: 24px;
   }
 }
