@@ -215,6 +215,8 @@ export const initialData = {
     },
   ],
 
+  ratings: [],
+
   visitedPlaces: [
     {
       id: 'vp_1',

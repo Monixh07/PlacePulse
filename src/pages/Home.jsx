@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import StoryBar from '../components/common/StoryBar'
 import ReelCard from '../components/common/ReelCard'
 import PlaceCard from '../components/common/PlaceCard'
 import EmptyState from '../components/common/EmptyState'
@@ -32,6 +31,12 @@ function Home({ onOpenPlace }) {
     return places.find((place) => place.id === reel.placeId)
   }
 
+  const handleHorizontalWheel = (event) => {
+    if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
+      event.currentTarget.scrollLeft += event.deltaY
+    }
+  }
+
   return (
     <div>
       <div className="page-header">
@@ -39,7 +44,16 @@ function Home({ onOpenPlace }) {
         <p>Find places worth exploring through short-form creator reels.</p>
       </div>
 
-      <StoryBar places={places} onSelectPlace={onOpenPlace} />
+      <section className="suggested-nearby-section">
+        <div className="section-header" style={{ marginBottom: '12px' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-text)' }}>Suggested Nearby Places</h2>
+        </div>
+        {places.length > 0 && (
+          <div className="suggested-nearby-scroll" onWheel={handleHorizontalWheel}>
+            {places.map((place) => <PlaceCard key={place.id} place={place} onOpen={onOpenPlace} />)}
+          </div>
+        )}
+      </section>
 
       <section className="feed-section">
         <div className="section-header" style={{ marginBottom: '16px' }}>

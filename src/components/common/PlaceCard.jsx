@@ -1,17 +1,26 @@
-import { MapPin, ArrowRight, Bookmark } from 'lucide-react'
-import { isItemSaved, toggleSaveItem } from '../../services/dataService'
+import { MapPin, ArrowRight, Bookmark, Star } from 'lucide-react'
+import { isItemSaved, toggleSaveItem, getPlaceRatingSummary } from '../../services/dataService'
 import { useAuth } from '../../context/AuthContext'
 import { useState, useEffect } from 'react'
 
 function PlaceCard({ place, onOpen }) {
   const { currentUser } = useAuth()
   const [saved, setSaved] = useState(false)
+  const [ratingSummary, setRatingSummary] = useState({ averageRating: 0, totalRatings: 0 })
 
   useEffect(() => {
     if (place && currentUser) {
       setSaved(isItemSaved('place', place.id, currentUser.id))
     }
   }, [place, currentUser])
+
+  useEffect(() => {
+    if (!place) return undefined
+    const loadRating = () => setRatingSummary(getPlaceRatingSummary(place.id))
+    loadRating()
+    window.addEventListener('placepulse_data_changed', loadRating)
+    return () => window.removeEventListener('placepulse_data_changed', loadRating)
+  }, [place])
 
   if (!place) return null
 
@@ -45,6 +54,11 @@ function PlaceCard({ place, onOpen }) {
         <div className="place-card-location">
           <MapPin size={14} />
           <span>{place.location || 'Location unavailable'}</span>
+        </div>
+
+        <div className="place-rating-summary" aria-label={ratingSummary.totalRatings ? `${ratingSummary.averageRating.toFixed(1)} out of 5 from ${ratingSummary.totalRatings} ratings` : 'No ratings yet'}>
+          <Star size={15} fill="currentColor" />
+          {ratingSummary.totalRatings ? <span>{ratingSummary.averageRating.toFixed(1)} ({ratingSummary.totalRatings} {ratingSummary.totalRatings === 1 ? 'rating' : 'ratings'})</span> : <span>No ratings yet</span>}
         </div>
 
         {place.description && (

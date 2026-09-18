@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Heart, MessageCircle, Bookmark, MapPin } from 'lucide-react'
+import { Heart, MessageCircle, Bookmark, MapPin, Share2 } from 'lucide-react'
 import { isReelLiked, toggleLikeReel, isItemSaved, toggleSaveItem } from '../../services/dataService'
 import { useAuth } from '../../context/AuthContext'
 
@@ -14,6 +14,7 @@ function ReelCard({
   const [liked, setLiked] = useState(false)
   const [likeCount, setLikeCount] = useState(0)
   const [saved, setSaved] = useState(false)
+  const [shareMessage, setShareMessage] = useState('')
 
   useEffect(() => {
     if (reel) {
@@ -40,8 +41,28 @@ function ReelCard({
     setSaved(isNowSaved)
   }
 
+  const handleShare = async () => {
+    const title = place?.name || 'PlacePulse Reel'
+    const shareData = { title, text: reel.caption || `Check out ${title} on PlacePulse.`, url: window.location.href }
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData)
+        return
+      }
+      await navigator.clipboard.writeText(shareData.url)
+      setShareMessage('Link copied')
+    } catch (error) {
+      if (error?.name === 'AbortError') return
+      setShareMessage('Unable to share')
+    }
+
+    window.setTimeout(() => setShareMessage(''), 2500)
+  }
+
   const views = reel.viewCount ?? reel.viewsCount ?? 0
   const comments = reel.commentCount ?? reel.commentsCount ?? 0
+  const isVideo = reel.mediaUrl?.startsWith('data:video/') || /\.(mp4|mov|webm|ogg)(\?|$)/i.test(reel.mediaUrl || '')
 
   return (
     <article className="reel-card">
@@ -64,7 +85,11 @@ function ReelCard({
 
       <div className="reel-card-media">
         {reel.mediaUrl ? (
-          <img src={reel.mediaUrl} alt={reel.caption || 'Place reel'} loading="lazy" />
+          isVideo ? (
+            <video src={reel.mediaUrl} controls muted playsInline preload="metadata" />
+          ) : (
+            <img src={reel.mediaUrl} alt={reel.caption || 'Place reel'} loading="lazy" />
+          )
         ) : (
           <div className="reel-card-media-empty">
             <span>No reel media</span>
@@ -120,11 +145,16 @@ function ReelCard({
             >
               <Bookmark size={20} fill={saved ? 'currentColor' : 'none'} />
             </button>
+
+            <button type="button" className="reel-action-btn" onClick={handleShare} aria-label="Share reel">
+              <Share2 size={20} />
+            </button>
           </div>
 
           <div className="reel-card-views">{views.toLocaleString()} views</div>
         </div>
       </div>
+      {shareMessage && <div className="reel-share-message">{shareMessage}</div>}
     </article>
   )
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { MapPin } from 'lucide-react'
+import MediaUpload from '../../components/common/MediaUpload'
 
 function Signup({ onSwitchToLogin }) {
   const { signup } = useAuth()
@@ -36,7 +37,7 @@ function Signup({ onSwitchToLogin }) {
       role,
       phone: phone.trim(),
       bio: bio.trim(),
-      profileImage: profileImage.trim(),
+      profileImage,
     })
 
     if (result.success) {
@@ -143,12 +144,12 @@ function Signup({ onSwitchToLogin }) {
           )}
 
           <div className="input-group">
-            <label>{role === 'business' ? 'Logo URL (optional)' : 'Profile Image URL (optional)'}</label>
-            <input
-              type="url"
+            <label>{role === 'business' ? 'Business logo (optional)' : 'Profile photo (optional)'}</label>
+            <MediaUpload
               value={profileImage}
-              onChange={(event) => setProfileImage(event.target.value)}
-              placeholder="https://images.unsplash.com/..."
+              onChange={setProfileImage}
+              accept="image/*"
+              label="Upload an image from your device"
             />
           </div>
 

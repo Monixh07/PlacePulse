@@ -35,7 +35,7 @@ export function signup(userData) {
     role: userData.role || 'normal',
     phone: userData.phone?.trim() || '',
     bio: userData.bio?.trim() || (userData.role === 'creator' ? 'Travel Creator on PlacePulse' : userData.role === 'business' ? 'Business & Tourism Promoter' : 'Travel Explorer'),
-    profileImage: userData.profileImage?.trim() || '',
+    profileImage: userData.profileImage || '',
     // Initial zero statistics for all new accounts
     followers: 0,
     following: 0,

@@ -16,6 +16,7 @@ import {
 } from '../../services/dataService'
 import EmptyState from '../../components/common/EmptyState'
 import Modal from '../../components/common/Modal'
+import MediaUpload from '../../components/common/MediaUpload'
 import {
   PlusCircle,
   Briefcase,
@@ -907,12 +908,12 @@ function BusinessDashboard({ onOpenPlace }) {
             </div>
 
             <div className="input-group">
-              <label>Cover Image URL</label>
-              <input
-                type="url"
+              <label>Cover Image</label>
+              <MediaUpload
                 value={placeCoverImage}
-                onChange={(e) => setPlaceCoverImage(e.target.value)}
-                placeholder="https://images.unsplash.com/..."
+                onChange={(blobUrl) => setPlaceCoverImage(blobUrl)}
+                accept="image/*"
+                label="Upload a cover photo for this destination"
               />
             </div>
 
@@ -1092,7 +1093,7 @@ function BusinessDashboard({ onOpenPlace }) {
               updateUserProfile(currentUser.id, {
                 name: editName.trim(),
                 bio: editBio.trim(),
-                profileImage: editProfileImage.trim(),
+                profileImage: editProfileImage,
               })
               setShowEditModal(false)
             }}
@@ -1117,11 +1118,12 @@ function BusinessDashboard({ onOpenPlace }) {
             </div>
 
             <div className="input-group">
-              <label>Logo / Cover Image URL</label>
-              <input
-                type="url"
+              <label>Logo / Cover Photo</label>
+              <MediaUpload
                 value={editProfileImage}
-                onChange={(e) => setEditProfileImage(e.target.value)}
+                onChange={(blobUrl) => setEditProfileImage(blobUrl)}
+                accept="image/*"
+                label="Upload your business logo or cover photo"
               />
             </div>
 

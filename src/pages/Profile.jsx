@@ -1,17 +1,19 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { getUserSavedPlaces, getUserLikedReels, getAllUsers, getPlaces, updateUserProfile } from '../services/dataService'
+import { getUserSavedPlaces, getUserSavedReels, getUserLikedReels, getAllUsers, getPlaces, updateUserProfile } from '../services/dataService'
 import PlaceCard from '../components/common/PlaceCard'
 import ReelCard from '../components/common/ReelCard'
 import EmptyState from '../components/common/EmptyState'
 import Modal from '../components/common/Modal'
 import CommentsModal from '../components/common/CommentsModal'
 import { Bookmark, Heart, Edit3, LogOut } from 'lucide-react'
+import MediaUpload from '../components/common/MediaUpload'
 
 function Profile({ onOpenPlace }) {
   const { currentUser, logout } = useAuth()
   const [activeTab, setActiveTab] = useState('saved') // 'saved' | 'liked'
   const [savedPlaces, setSavedPlaces] = useState([])
+  const [savedReels, setSavedReels] = useState([])
   const [likedReels, setLikedReels] = useState([])
   const [users, setUsers] = useState([])
   const [places, setPlaces] = useState([])
@@ -27,6 +29,7 @@ function Profile({ onOpenPlace }) {
   const loadProfileData = () => {
     if (!currentUser) return
     setSavedPlaces(getUserSavedPlaces(currentUser.id))
+    setSavedReels(getUserSavedReels(currentUser.id))
     setLikedReels(getUserLikedReels(currentUser.id))
     setUsers(getAllUsers())
     setPlaces(getPlaces())
@@ -52,7 +55,7 @@ function Profile({ onOpenPlace }) {
       name: editName.trim(),
       username: editUsername.trim(),
       bio: editBio.trim(),
-      profileImage: editProfileImage.trim(),
+      profileImage: editProfileImage,
     })
     setShowEditModal(false)
   }
@@ -169,7 +172,7 @@ function Profile({ onOpenPlace }) {
           onClick={() => setActiveTab('saved')}
         >
           <Bookmark size={15} style={{ marginRight: '6px' }} />
-          Saved Places ({savedPlaces.length})
+          Saved ({savedPlaces.length + savedReels.length})
         </button>
         <button
           type="button"
@@ -183,21 +186,28 @@ function Profile({ onOpenPlace }) {
 
       {/* Tab Content */}
       {activeTab === 'saved' ? (
-        savedPlaces.length === 0 ? (
+        savedPlaces.length === 0 && savedReels.length === 0 ? (
           <EmptyState
-            title="No saved places yet"
-            message="Discover places in the Explore or Home feeds and tap the bookmark icon to save them for your next trip."
+            title="No saved items yet"
+            message="Discover places or reels and tap the bookmark icon to save them for later."
           />
         ) : (
-          <div className="places-grid">
-            {savedPlaces.map((place) => (
-              <PlaceCard
-                key={place.id}
-                place={place}
-                onOpen={onOpenPlace}
-              />
-            ))}
-          </div>
+          <>
+            {savedReels.length > 0 && (
+              <div className="feed-list" style={{ marginBottom: savedPlaces.length > 0 ? '24px' : 0 }}>
+                {savedReels.map((reel) => {
+                  const creator = users.find((user) => user.id === reel.creatorId)
+                  const place = places.find((savedPlace) => savedPlace.id === reel.placeId)
+                  return <ReelCard key={reel.id} reel={reel} creator={creator} place={place} onOpenPlace={onOpenPlace} onComment={() => setActiveCommentReel(reel)} />
+                })}
+              </div>
+            )}
+            {savedPlaces.length > 0 && (
+              <div className="places-grid">
+                {savedPlaces.map((place) => <PlaceCard key={place.id} place={place} onOpen={onOpenPlace} />)}
+              </div>
+            )}
+          </>
         )
       ) : likedReels.length === 0 ? (
         <EmptyState
@@ -258,12 +268,12 @@ function Profile({ onOpenPlace }) {
             </div>
 
             <div className="input-group">
-              <label>Profile Image URL</label>
-              <input
-                type="url"
+              <label>Profile photo</label>
+              <MediaUpload
                 value={editProfileImage}
-                onChange={(e) => setEditProfileImage(e.target.value)}
-                placeholder="https://..."
+                onChange={setEditProfileImage}
+                accept="image/*"
+                label="Upload a profile photo from your device"
               />
             </div>
 

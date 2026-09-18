@@ -17,6 +17,7 @@ import ReelCard from '../../components/common/ReelCard'
 import EmptyState from '../../components/common/EmptyState'
 import Modal from '../../components/common/Modal'
 import CommentsModal from '../../components/common/CommentsModal'
+import MediaUpload from '../../components/common/MediaUpload'
 import {
   Video,
   Briefcase,
@@ -118,7 +119,7 @@ function CreatorDashboard({ onOpenPlace }) {
       creatorId: currentUser.id,
       placeId: freePromoPlaceId,
       caption: freePromoCaption.trim(),
-      mediaUrl: freePromoMediaUrl.trim() || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800',
+      mediaUrl: freePromoMediaUrl || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800',
     })
 
     setShowFreePromoModal(false)
@@ -148,7 +149,7 @@ function CreatorDashboard({ onOpenPlace }) {
       activeUploadCampaign.id,
       currentUser.id,
       activeUploadCampaign.placeId,
-      campMediaUrl.trim() || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800',
+      campMediaUrl || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800',
       campCaption.trim()
     )
 
@@ -164,7 +165,7 @@ function CreatorDashboard({ onOpenPlace }) {
     updateUserProfile(currentUser.id, {
       name: editName.trim(),
       bio: editBio.trim(),
-      profileImage: editProfileImage.trim(),
+      profileImage: editProfileImage,
     })
     setShowEditModal(false)
   }
@@ -664,12 +665,12 @@ function CreatorDashboard({ onOpenPlace }) {
             </div>
 
             <div className="input-group">
-              <label>Reel Media URL (Image or Video preview)</label>
-              <input
-                type="url"
+              <label>Reel Media (Photo or Video)</label>
+              <MediaUpload
                 value={freePromoMediaUrl}
-                onChange={(e) => setFreePromoMediaUrl(e.target.value)}
-                placeholder="https://images.unsplash.com/..."
+                onChange={(blobUrl) => setFreePromoMediaUrl(blobUrl)}
+                accept="image/*,video/*"
+                label="Upload a photo or short video from your device"
               />
             </div>
 
@@ -709,12 +710,12 @@ function CreatorDashboard({ onOpenPlace }) {
             </p>
 
             <div className="input-group">
-              <label>Reel Media URL</label>
-              <input
-                type="url"
+              <label>Campaign Reel Media (Photo or Video)</label>
+              <MediaUpload
                 value={campMediaUrl}
-                onChange={(e) => setCampMediaUrl(e.target.value)}
-                placeholder="https://images.unsplash.com/..."
+                onChange={(blobUrl) => setCampMediaUrl(blobUrl)}
+                accept="image/*,video/*"
+                label="Upload your promotional photo or video"
               />
             </div>
 
@@ -769,11 +770,12 @@ function CreatorDashboard({ onOpenPlace }) {
             </div>
 
             <div className="input-group">
-              <label>Profile Image URL</label>
-              <input
-                type="url"
+              <label>Profile Photo</label>
+              <MediaUpload
                 value={editProfileImage}
-                onChange={(e) => setEditProfileImage(e.target.value)}
+                onChange={(blobUrl) => setEditProfileImage(blobUrl)}
+                accept="image/*"
+                label="Upload a profile photo from your device"
               />
             </div>
 

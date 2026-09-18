@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { MapPin, ArrowLeft, Bookmark, Sparkles, Video, PlusCircle } from 'lucide-react'
-import { isItemSaved, toggleSaveItem, getReels, getAllUsers } from '../services/dataService'
+import { MapPin, ArrowLeft, Bookmark, Sparkles, Video, PlusCircle, Star } from 'lucide-react'
+import { isItemSaved, toggleSaveItem, getReels, getAllUsers, getPlaceRatingSummary, getUserPlaceRating, setPlaceRating } from '../services/dataService'
 import { useAuth } from '../context/AuthContext'
 import ReelCard from '../components/common/ReelCard'
 import CommentsModal from '../components/common/CommentsModal'
@@ -22,6 +22,8 @@ function PlaceDetails({ place, onBack, onPromotePlace, onCreateCampaign }) {
   const [placeReels, setPlaceReels] = useState([])
   const [users, setUsers] = useState([])
   const [activeCommentReel, setActiveCommentReel] = useState(null)
+  const [ratingSummary, setRatingSummary] = useState({ averageRating: 0, totalRatings: 0 })
+  const [userRating, setUserRating] = useState(null)
 
   useEffect(() => {
     if (place) {
@@ -32,6 +34,17 @@ function PlaceDetails({ place, onBack, onPromotePlace, onCreateCampaign }) {
       setPlaceReels(allReels.filter((r) => r.placeId === place.id))
       setUsers(getAllUsers())
     }
+  }, [place, currentUser])
+
+  useEffect(() => {
+    if (!place) return undefined
+    const loadRatings = () => {
+      setRatingSummary(getPlaceRatingSummary(place.id))
+      setUserRating(currentUser?.role === 'normal' ? getUserPlaceRating(place.id, currentUser.id)?.value ?? null : null)
+    }
+    loadRatings()
+    window.addEventListener('placepulse_data_changed', loadRatings)
+    return () => window.removeEventListener('placepulse_data_changed', loadRatings)
   }, [place, currentUser])
 
   if (!place) {
@@ -49,6 +62,15 @@ function PlaceDetails({ place, onBack, onPromotePlace, onCreateCampaign }) {
     if (!currentUser) return
     const newState = toggleSaveItem('place', place.id, currentUser.id)
     setSaved(newState)
+  }
+
+  const handleRate = (value) => {
+    if (currentUser?.role !== 'normal') return
+    const updatedSummary = setPlaceRating(place.id, currentUser.id, value)
+    if (updatedSummary) {
+      setUserRating(value)
+      setRatingSummary(updatedSummary)
+    }
   }
 
   const hasCoords =
@@ -98,6 +120,10 @@ function PlaceDetails({ place, onBack, onPromotePlace, onCreateCampaign }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-text-secondary)', fontSize: '14px' }}>
               <MapPin size={16} />
               <span>{place.location}</span>
+            </div>
+            <div className="place-rating-summary" style={{ marginTop: '10px' }}>
+              <Star size={16} fill="currentColor" />
+              {ratingSummary.totalRatings ? <span>{ratingSummary.averageRating.toFixed(1)} ({ratingSummary.totalRatings} {ratingSummary.totalRatings === 1 ? 'rating' : 'ratings'})</span> : <span>No ratings yet</span>}
             </div>
           </div>
 
@@ -188,6 +214,20 @@ function PlaceDetails({ place, onBack, onPromotePlace, onCreateCampaign }) {
         )}
 
         {/* Description */}
+        {currentUser?.role === 'normal' && (
+          <section style={{ marginTop: '20px', padding: '16px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', background: 'var(--color-surface)' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '5px' }}>Rate this place</h3>
+            <p style={{ margin: '0 0 10px', color: 'var(--color-text-secondary)', fontSize: '13px' }}>{userRating ? `Your rating: ${userRating} out of 5` : 'Select a star to rate this place.'}</p>
+            <div style={{ display: 'flex', gap: '4px' }} aria-label="Rate this place from 1 to 5 stars">
+              {[1, 2, 3, 4, 5].map((value) => (
+                <button key={value} type="button" onClick={() => handleRate(value)} aria-label={`Rate ${value} star${value === 1 ? '' : 's'}`} style={{ display: 'inline-flex', padding: '2px', color: value <= (userRating || 0) ? '#f59e0b' : 'var(--color-text-muted)' }}>
+                  <Star size={25} fill={value <= (userRating || 0) ? 'currentColor' : 'none'} />
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
         <div style={{ marginTop: '20px' }}>
           <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '8px' }}>About this Place</h3>
           <p style={{ fontSize: '14px', lineHeight: 1.6, color: 'var(--color-text-secondary)' }}>

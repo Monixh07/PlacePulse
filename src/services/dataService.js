@@ -182,6 +182,44 @@ export function toggleSaveItem(type, targetId, userId) {
   return saved
 }
 
+// ----------------- PLACE RATINGS -----------------
+export function getPlaceRatingSummary(placeId) {
+  const data = getData()
+  const ratings = (data?.ratings || []).filter((rating) => rating.placeId === placeId)
+  const totalRatings = ratings.length
+  const averageRating = totalRatings === 0
+    ? 0
+    : ratings.reduce((total, rating) => total + rating.value, 0) / totalRatings
+
+  return { averageRating, totalRatings }
+}
+
+export function getUserPlaceRating(placeId, userId) {
+  if (!userId) return null
+  const data = getData()
+  return (data?.ratings || []).find((rating) => rating.placeId === placeId && rating.userId === userId) || null
+}
+
+export function setPlaceRating(placeId, userId, value) {
+  const ratingValue = Number(value)
+  if (!placeId || !userId || !Number.isInteger(ratingValue) || ratingValue < 1 || ratingValue > 5) return null
+
+  const data = getData()
+  data.ratings = data.ratings || []
+  const existingRating = data.ratings.find((rating) => rating.placeId === placeId && rating.userId === userId)
+
+  if (existingRating) {
+    existingRating.value = ratingValue
+    existingRating.createdAt = new Date().toISOString()
+  } else {
+    data.ratings.push({ id: 'rating_' + Date.now(), placeId, userId, value: ratingValue, createdAt: new Date().toISOString() })
+  }
+
+  saveData(data)
+  notifyChange()
+  return getPlaceRatingSummary(placeId)
+}
+
 export function getCommentsByReel(reelId) {
   const data = getData()
   return (data?.comments || []).filter((c) => c.reelId === reelId)
@@ -236,6 +274,15 @@ export function getUserSavedPlaces(userId) {
     .filter((s) => s.userId === userId && s.type === 'place')
     .map((s) => s.targetId)
   return (data?.places || []).filter((p) => savedIds.includes(p.id))
+}
+
+export function getUserSavedReels(userId) {
+  if (!userId) return []
+  const data = getData()
+  const savedIds = (data?.saves || [])
+    .filter((save) => save.userId === userId && save.type === 'reel')
+    .map((save) => save.targetId)
+  return (data?.reels || []).filter((reel) => savedIds.includes(reel.id))
 }
 
 export function getUserLikedReels(userId) {
