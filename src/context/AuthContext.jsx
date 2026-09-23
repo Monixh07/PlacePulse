@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import {
-  getProfile,
+  getOrCreateProfile,
   login as loginUser,
   logout as logoutUser,
   restoreSession,
@@ -36,7 +36,7 @@ export function AuthProvider({ children }) {
 
       // Do not await Supabase queries inside the auth callback.
       setTimeout(() => {
-        getProfile(session.user)
+        getOrCreateProfile(session.user)
           .then((profile) => mounted && setCurrentUser(profile))
           .catch(() => mounted && setCurrentUser(null))
           .finally(() => mounted && setLoading(false))

@@ -61,3 +61,53 @@ drop trigger if exists profiles_prevent_role_change on public.profiles;
 create trigger profiles_prevent_role_change
 before update on public.profiles
 for each row execute function public.prevent_profile_role_change();
+
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  requested_role text := coalesce(new.raw_user_meta_data ->> 'role', 'normal');
+begin
+  if requested_role not in ('normal', 'creator', 'business') then
+    requested_role := 'normal';
+  end if;
+
+  insert into public.profiles (
+    id,
+    name,
+    username,
+    email,
+    role,
+    phone,
+    bio,
+    profile_image,
+    creator_score
+  )
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data ->> 'name', 'User'),
+    coalesce(
+      nullif(new.raw_user_meta_data ->> 'username', ''),
+      split_part(new.email, '@', 1)
+    ),
+    new.email,
+    requested_role,
+    coalesce(new.raw_user_meta_data ->> 'phone', ''),
+    coalesce(new.raw_user_meta_data ->> 'bio', ''),
+    coalesce(new.raw_user_meta_data ->> 'profileImage', ''),
+    case when requested_role = 'creator' then 75 else 0 end
+  )
+  on conflict (id) do nothing;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+
+create trigger on_auth_user_created
+after insert on auth.users
+for each row execute function public.handle_new_user();

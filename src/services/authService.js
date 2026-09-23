@@ -19,6 +19,9 @@ function authMessage(error, fallback = 'Unable to complete authentication') {
   if (message.includes('email not confirmed')) {
     return 'Please confirm your email address before logging in.'
   }
+  if (message.includes('too many requests') || message.includes('rate limit')) {
+    return 'Too many attempts. Please wait a few minutes before trying again.'
+  }
   if (message.includes('password')) {
     return error.message
   }
@@ -44,6 +47,47 @@ function profileFromRow(row, authUser) {
     creatorScore: row.creator_score || 0,
     earnings: row.earnings || 0,
   }
+}
+
+function profileFromAuthUser(authUser) {
+  const metadata = authUser.user_metadata || {}
+  const email = authUser.email || ''
+  const username = (
+    metadata.username ||
+    email.split('@')[0] ||
+    `user_${authUser.id.slice(0, 8)}`
+  ).toLowerCase().replace(/[^a-z0-9_]/g, '') || `user_${authUser.id.slice(0, 8)}`
+  const requestedRole = metadata.role
+  const role = ['normal', 'creator', 'business'].includes(requestedRole) ? requestedRole : 'normal'
+
+  return {
+    id: authUser.id,
+    name: metadata.name?.trim() || 'User',
+    username,
+    email,
+    role,
+    phone: metadata.phone?.trim() || '',
+    bio: metadata.bio?.trim() || '',
+    profile_image: metadata.profileImage || '',
+    followers: 0,
+    following: 0,
+    creator_score: role === 'creator' ? 75 : 0,
+    earnings: 0,
+  }
+}
+
+export async function getOrCreateProfile(authUser) {
+  const existingProfile = await getProfile(authUser)
+  if (existingProfile) return existingProfile
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .insert(profileFromAuthUser(authUser))
+    .select()
+    .single()
+
+  if (error) throw error
+  return profileFromRow(data, authUser)
 }
 
 export async function getProfile(authUser) {
@@ -77,7 +121,11 @@ export async function signup(userData) {
         name: userData.name?.trim() || 'User',
         username: cleanUsername,
         role: userData.role || 'normal',
+        phone: userData.phone?.trim() || '',
+        bio: userData.bio?.trim() || '',
+        profileImage: userData.profileImage || '',
       },
+      emailRedirectTo: `${window.location.origin}/`,
     },
   })
 
@@ -85,6 +133,14 @@ export async function signup(userData) {
   if (!data.user) return { success: false, message: 'Unable to create your account.' }
   if (data.user.identities && data.user.identities.length === 0) {
     return { success: false, message: 'Email already registered. Please login instead.' }
+  }
+
+  if (!data.session) {
+    return {
+      success: true,
+      user: null,
+      requiresEmailConfirmation: true,
+    }
   }
 
   const profile = {
@@ -115,7 +171,7 @@ export async function signup(userData) {
   return {
     success: true,
     user: data.session ? profileFromRow(savedProfile, data.user) : null,
-    requiresEmailConfirmation: !data.session,
+    requiresEmailConfirmation: false,
   }
 }
 
@@ -130,10 +186,10 @@ export async function login(email, password) {
   if (error) return { success: false, message: authMessage(error, 'Invalid email or password.') }
 
   try {
-    const profile = await getProfile(data.user)
+    const profile = await getOrCreateProfile(data.user)
     if (!profile) {
       await supabase.auth.signOut()
-      return { success: false, message: 'Your account profile is missing. Please contact an administrator.' }
+      return { success: false, message: 'Your account profile could not be loaded. Please try again.' }
     }
     return { success: true, user: profile }
   } catch (profileError) {
@@ -151,7 +207,7 @@ export async function restoreSession() {
   if (error || !data.session) return { user: null, error: error ? authMessage(error) : null }
 
   try {
-    return { user: await getProfile(data.session.user), error: null }
+    return { user: await getOrCreateProfile(data.session.user), error: null }
   } catch (profileError) {
     return { user: null, error: authMessage(profileError, 'Unable to load your profile.') }
   }
