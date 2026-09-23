@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Search, Grid, Map as MapIcon, ArrowRight } from 'lucide-react'
-import { getPlaces } from '../services/dataService'
+import { getPublicPlaces } from '../services/dataService'
 import PlaceCard from '../components/common/PlaceCard'
 import EmptyState from '../components/common/EmptyState'
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
@@ -26,7 +26,7 @@ function Explore({ onOpenPlace }) {
   const [viewMode, setViewMode] = useState('grid') // 'grid' | 'map'
 
   const loadPlaces = () => {
-    setPlaces(getPlaces())
+    setPlaces(getPublicPlaces())
   }
 
   useEffect(() => {

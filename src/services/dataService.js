@@ -10,12 +10,31 @@ export function getPlaces() {
   return data?.places || []
 }
 
+export function getPublicPlaces() {
+  return getPlaces().filter((place) => place.status === undefined || place.status === 'approved')
+}
+
+export function getVisiblePlaces(user = null) {
+  return getPlaces().filter((place) => (
+    place.status === undefined ||
+    place.status === 'approved' ||
+    (user && (
+      (place.businessId && place.businessId === user.id) ||
+      (place.creatorId && place.creatorId === user.id)
+    ))
+  ))
+}
+
+export function getPendingPlaces() {
+  return getPlaces().filter((place) => place.status === 'pending')
+}
+
 export function getPlaceById(id) {
   const places = getPlaces()
   return places.find((p) => p.id === id) || null
 }
 
-export function addPlace(placeData, businessId = null) {
+export function addPlace(placeData, businessId = null, options = {}) {
   const data = getData()
   const newPlace = {
     id: 'place_' + Date.now(),
@@ -30,6 +49,8 @@ export function addPlace(placeData, businessId = null) {
       ? placeData.facilities
       : (placeData.facilities || '').split(',').map((f) => f.trim()).filter(Boolean),
     coverImage: placeData.coverImage || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800',
+    creatorId: options.creatorId || placeData.creatorId || null,
+    status: options.status || placeData.status || (businessId || options.creatorId ? 'pending' : 'approved'),
     createdAt: new Date().toISOString(),
   }
 
@@ -38,6 +59,37 @@ export function addPlace(placeData, businessId = null) {
   saveData(data)
   notifyChange()
   return newPlace
+}
+
+export function verifyPlace(placeId, verifier) {
+  if (!verifier || !['admin', 'developer'].includes(verifier.role)) {
+    return { success: false, message: 'Only an admin or developer can verify places.' }
+  }
+  const data = getData()
+  const place = (data.places || []).find((item) => item.id === placeId)
+  if (!place) return { success: false, message: 'Place not found.' }
+  place.status = 'approved'
+  place.verifiedBy = verifier.id
+  place.verifiedAt = new Date().toISOString()
+  saveData(data)
+  notifyChange()
+  return { success: true, place }
+}
+
+export function rejectPlace(placeId, verifier, rejectionReason = '') {
+  if (!verifier || !['admin', 'developer'].includes(verifier.role)) {
+    return { success: false, message: 'Only an admin or developer can reject places.' }
+  }
+  const data = getData()
+  const place = (data.places || []).find((item) => item.id === placeId)
+  if (!place) return { success: false, message: 'Place not found.' }
+  place.status = 'rejected'
+  place.rejectionReason = rejectionReason.trim()
+  place.rejectedBy = verifier.id
+  place.rejectedAt = new Date().toISOString()
+  saveData(data)
+  notifyChange()
+  return { success: true, place }
 }
 
 export function updatePlace(id, updates) {
@@ -60,6 +112,11 @@ export function deletePlace(id) {
 export function getReels() {
   const data = getData()
   return data?.reels || []
+}
+
+export function getPublicReels() {
+  const publicPlaceIds = new Set(getPublicPlaces().map((place) => place.id))
+  return getReels().filter((reel) => publicPlaceIds.has(reel.placeId))
 }
 
 export function getReelById(id) {

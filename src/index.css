@@ -298,6 +298,12 @@ a {
   border-color: #fde68a;
 }
 
+.status-badge.rejected {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
 /* Modal */
 .modal-overlay {
   position: fixed;

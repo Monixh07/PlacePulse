@@ -3,7 +3,7 @@ import ReelCard from '../components/common/ReelCard'
 import PlaceCard from '../components/common/PlaceCard'
 import EmptyState from '../components/common/EmptyState'
 import CommentsModal from '../components/common/CommentsModal'
-import { getReels, getPlaces, getAllUsers } from '../services/dataService'
+import { getPublicReels, getPublicPlaces, getAllUsers } from '../services/dataService'
 
 function Home({ onOpenPlace }) {
   const [reels, setReels] = useState([])
@@ -12,8 +12,8 @@ function Home({ onOpenPlace }) {
   const [activeCommentReel, setActiveCommentReel] = useState(null)
 
   const loadFeed = () => {
-    setReels(getReels())
-    setPlaces(getPlaces())
+    setReels(getPublicReels())
+    setPlaces(getPublicPlaces())
     setUsers(getAllUsers())
   }
 

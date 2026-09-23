@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Heart, MessageCircle, Bookmark, MapPin, Share2 } from 'lucide-react'
-import { getReels, getPlaces, getAllUsers, incrementReelViews, isReelLiked, toggleLikeReel, isItemSaved, toggleSaveItem } from '../services/dataService'
+import { getPublicReels, getPublicPlaces, getAllUsers, incrementReelViews, isReelLiked, toggleLikeReel, isItemSaved, toggleSaveItem } from '../services/dataService'
 import { useAuth } from '../context/AuthContext'
 import CommentsModal from '../components/common/CommentsModal'
 import EmptyState from '../components/common/EmptyState'
@@ -93,7 +93,7 @@ function Reels({ onOpenPlace }) {
   const [activeCommentReel, setActiveCommentReel] = useState(null)
 
   useEffect(() => {
-    const loadReelsData = () => { setReels(getReels()); setPlaces(getPlaces()); setUsers(getAllUsers()) }
+    const loadReelsData = () => { setReels(getPublicReels()); setPlaces(getPublicPlaces()); setUsers(getAllUsers()) }
     loadReelsData()
     window.addEventListener('placepulse_data_changed', loadReelsData)
     return () => window.removeEventListener('placepulse_data_changed', loadReelsData)

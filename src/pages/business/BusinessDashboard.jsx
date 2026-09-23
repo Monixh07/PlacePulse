@@ -175,7 +175,12 @@ function BusinessDashboard({ onOpenPlace }) {
 
   // Handle Campaign Creation
   const handleOpenAddCamp = (defaultPlaceId = '') => {
-    setCampPlaceId(defaultPlaceId || (places[0]?.id || ''))
+    const approvedPlaces = places.filter((place) => place.status === undefined || place.status === 'approved')
+    if (approvedPlaces.length === 0) {
+      showToast('Add and verify a place before launching a campaign.')
+      return
+    }
+    setCampPlaceId(approvedPlaces.some((place) => place.id === defaultPlaceId) ? defaultPlaceId : (approvedPlaces[0]?.id || ''))
     setCampTitle('')
     setCampDesc('')
     setMinFollowers(1000)
@@ -193,7 +198,11 @@ function BusinessDashboard({ onOpenPlace }) {
 
   const handleCampSubmit = (e) => {
     e.preventDefault()
-    if (!campPlaceId || !campTitle.trim()) return
+    const selectedPlace = places.find((place) => place.id === campPlaceId)
+    if (!campPlaceId || !campTitle.trim() || (selectedPlace && selectedPlace.status !== undefined && selectedPlace.status !== 'approved')) {
+      showToast('Campaigns can only be created for approved places.')
+      return
+    }
 
     addCampaign(
       {
@@ -484,12 +493,18 @@ function BusinessDashboard({ onOpenPlace }) {
                     <div className="place-card-title-row">
                       <h3>{place.name}</h3>
                       <span className="place-card-category">{place.category}</span>
+                      {place.status && place.status !== 'approved' && (
+                        <span className={`status-badge ${place.status}`}>{place.status}</span>
+                      )}
                     </div>
                     <div className="place-card-location">
                       <MapPin size={14} />
                       <span>{place.location}</span>
                     </div>
                     <p className="place-card-description">{place.description}</p>
+                    {place.status === 'rejected' && place.rejectionReason && (
+                      <p style={{ color: 'var(--color-danger)', fontSize: '12px' }}>Reason: {place.rejectionReason}</p>
+                    )}
                     <div className="place-card-footer" style={{ borderTop: '1px solid var(--color-border)', paddingTop: '10px', marginTop: 'auto' }}>
                       <div style={{ display: 'flex', gap: '6px' }}>
                         <button
@@ -522,9 +537,10 @@ function BusinessDashboard({ onOpenPlace }) {
                         type="button"
                         className="btn btn-primary btn-sm"
                         onClick={() => handleOpenAddCamp(place.id)}
+                        disabled={place.status !== undefined && place.status !== 'approved'}
                         style={{ fontSize: '11px', padding: '4px 8px' }}
                       >
-                        Launch Campaign
+                        {place.status === 'pending' ? 'Awaiting Approval' : place.status === 'rejected' ? 'Place Rejected' : 'Launch Campaign'}
                       </button>
                     </div>
                   </div>
@@ -964,7 +980,7 @@ function BusinessDashboard({ onOpenPlace }) {
                 onChange={(e) => setCampPlaceId(e.target.value)}
                 required
               >
-                {places.map((p) => (
+                {places.filter((p) => p.status === undefined || p.status === 'approved').map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name} ({p.location})
                   </option>

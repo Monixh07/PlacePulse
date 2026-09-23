@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import {
-  getPlaces,
+  getVisiblePlaces,
   getReels,
   getCampaigns,
   getApplications,
@@ -10,6 +10,7 @@ import {
   markVisitCompleted,
   submitCampaignReel,
   addReel,
+  addPlace,
   getVisitedPlaces,
   updateUserProfile,
 } from '../../services/dataService'
@@ -53,6 +54,11 @@ function CreatorDashboard({ onOpenPlace }) {
   const [freePromoPlaceId, setFreePromoPlaceId] = useState('')
   const [freePromoCaption, setFreePromoCaption] = useState('')
   const [freePromoMediaUrl, setFreePromoMediaUrl] = useState('')
+  const [freePromoMode, setFreePromoMode] = useState('existing')
+  const [newPlaceName, setNewPlaceName] = useState('')
+  const [newPlaceLocation, setNewPlaceLocation] = useState('')
+  const [newPlaceCategory, setNewPlaceCategory] = useState('Nature')
+  const [newPlaceCoverImage, setNewPlaceCoverImage] = useState('')
 
   // Campaign Reel Upload Modal
   const [activeUploadCampaign, setActiveUploadCampaign] = useState(null)
@@ -70,7 +76,7 @@ function CreatorDashboard({ onOpenPlace }) {
 
   const loadCreatorData = () => {
     if (!currentUser) return
-    const allPlaces = getPlaces()
+    const allPlaces = getVisiblePlaces(currentUser)
     const allReels = getReels()
     const allCamps = getCampaigns()
     const allApps = getApplications()
@@ -113,15 +119,26 @@ function CreatorDashboard({ onOpenPlace }) {
   // Free Promotion Submit
   const handleFreePromoSubmit = (e) => {
     e.preventDefault()
-    if (!freePromoPlaceId || !freePromoMediaUrl || !freePromoCaption.trim()) {
-      setActionMessage('Select a place, upload media, and add a caption before publishing.')
+    if (!freePromoMediaUrl || !freePromoCaption.trim() || (freePromoMode === 'existing' && !freePromoPlaceId) || (freePromoMode === 'new' && (!newPlaceName.trim() || !newPlaceLocation.trim()))) {
+      setActionMessage('Choose an existing place or add a new place, then upload media and add a caption.')
       setTimeout(() => setActionMessage(''), 4000)
       return
     }
 
+    let placeId = freePromoPlaceId
+    if (freePromoMode === 'new') {
+      const place = addPlace({
+        name: newPlaceName.trim(),
+        location: newPlaceLocation.trim(),
+        category: newPlaceCategory,
+        coverImage: newPlaceCoverImage,
+      }, null, { creatorId: currentUser.id })
+      placeId = place.id
+    }
+
     addReel({
       creatorId: currentUser.id,
-      placeId: freePromoPlaceId,
+      placeId,
       caption: freePromoCaption.trim(),
       mediaUrl: freePromoMediaUrl,
     })
@@ -129,6 +146,11 @@ function CreatorDashboard({ onOpenPlace }) {
     setShowFreePromoModal(false)
     setFreePromoCaption('')
     setFreePromoMediaUrl('')
+    setFreePromoPlaceId('')
+    setFreePromoMode('existing')
+    setNewPlaceName('')
+    setNewPlaceLocation('')
+    setNewPlaceCoverImage('')
     setActionMessage('Free promotional reel published successfully!')
     setTimeout(() => setActionMessage(''), 4000)
   }
@@ -406,9 +428,17 @@ function CreatorDashboard({ onOpenPlace }) {
                     )}
                     <div style={{ flex: 1 }}>
                       <strong style={{ fontSize: '14px', color: 'var(--color-text)' }}>{place.name}</strong>
+                      {place.status && place.status !== 'approved' && (
+                        <span className={`status-badge ${place.status}`} style={{ marginLeft: '8px' }}>{place.status}</span>
+                      )}
                       <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'block' }}>
                         {place.location}
                       </span>
+                      {place.status === 'rejected' && place.rejectionReason && (
+                        <span style={{ color: 'var(--color-danger)', fontSize: '12px', display: 'block' }}>
+                          Reason: {place.rejectionReason}
+                        </span>
+                      )}
                       <button
                         type="button"
                         className="btn btn-outline btn-sm"
@@ -657,20 +687,48 @@ function CreatorDashboard({ onOpenPlace }) {
             </p>
 
             <div className="input-group">
-              <label>Select Place</label>
+              <label>Place</label>
+              <select value={freePromoMode} onChange={(e) => setFreePromoMode(e.target.value)}>
+                <option value="existing">Existing Place</option>
+                <option value="new">Add New Place</option>
+              </select>
+            </div>
+
+            {freePromoMode === 'existing' ? <div className="input-group">
+              <label>Select Existing Place</label>
               <select
                 value={freePromoPlaceId}
                 onChange={(e) => setFreePromoPlaceId(e.target.value)}
                 required
               >
                 <option value="">-- Choose a Destination --</option>
-                {places.map((p) => (
+                {places.filter((p) => p.status !== 'rejected').map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name} ({p.location})
+                    {p.name} ({p.location}){p.status && p.status !== 'approved' ? ` — ${p.status}` : ''}
                   </option>
                 ))}
               </select>
-            </div>
+            </div> : <div className="card" style={{ padding: '12px', marginBottom: '14px' }}>
+              <div className="input-group">
+                <label>New Place Name</label>
+                <input value={newPlaceName} onChange={(e) => setNewPlaceName(e.target.value)} required placeholder="e.g. Hidden Falls" />
+              </div>
+              <div className="input-group">
+                <label>Location</label>
+                <input value={newPlaceLocation} onChange={(e) => setNewPlaceLocation(e.target.value)} required placeholder="City, State" />
+              </div>
+              <div className="input-group">
+                <label>Category</label>
+                <select value={newPlaceCategory} onChange={(e) => setNewPlaceCategory(e.target.value)}>
+                  <option>Nature</option><option>Beach</option><option>Heritage</option><option>Mountain</option><option>Cafe</option>
+                </select>
+              </div>
+              <div className="input-group">
+                <label>Cover Image (optional)</label>
+                <MediaUpload value={newPlaceCoverImage} onChange={setNewPlaceCoverImage} accept="image/*" label="Upload a cover photo" />
+              </div>
+              <p style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>New places are submitted for developer/admin verification and remain visible to you meanwhile.</p>
+            </div>}
 
             <div className="input-group">
               <label>Reel Media (Photo or Video)</label>
