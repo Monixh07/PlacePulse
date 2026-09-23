@@ -14,4 +14,5 @@ export const initialData = {
   messages: [],
   creatorStats: [],
   businessStats: [],
+  currentUser: null,
 }

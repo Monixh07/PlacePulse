@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { MapPin } from 'lucide-react'
 import MediaUpload from '../../components/common/MediaUpload'
@@ -15,9 +15,12 @@ function Signup({ onSwitchToLogin }) {
   const [bio, setBio] = useState('')
   const [profileImage, setProfileImage] = useState('')
   const [message, setMessage] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const submittingRef = useRef(false)
 
   async function handleSubmit(event) {
     event.preventDefault()
+    if (submittingRef.current) return
 
     if (name.trim().length < 2) {
       setMessage('Name must be at least 2 characters')
@@ -29,23 +32,35 @@ function Signup({ onSwitchToLogin }) {
       return
     }
 
-    const result = await signup({
-      name: name.trim(),
-      username: username.trim(),
-      email: email.trim().toLowerCase(),
-      password,
-      role,
-      phone: phone.trim(),
-      bio: bio.trim(),
-      profileImage,
-    })
+    submittingRef.current = true
+    setIsSubmitting(true)
+    try {
+      const result = await signup({
+        name: name.trim(),
+        username: username.trim(),
+        email: email.trim().toLowerCase(),
+        password,
+        role,
+        phone: phone.trim(),
+        bio: bio.trim(),
+        profileImage,
+      })
 
-    if (result.success) {
-      setMessage(result.requiresEmailConfirmation
-        ? 'Account created. Check your email to confirm your address, then log in.'
-        : '')
-    } else {
-      setMessage(result.message)
+      if (result.success) {
+        setMessage(result.requiresEmailConfirmation
+          ? 'Account created. Check your email to confirm your address, then log in.'
+          : '')
+      } else {
+        setMessage(result.message)
+      }
+    } catch (error) {
+      setMessage('Unable to create your account. Please try again later.')
+      if (import.meta.env.DEV) {
+        console.error('[Signup] unexpected error', error)
+      }
+    } finally {
+      submittingRef.current = false
+      setIsSubmitting(false)
     }
   }
 
@@ -155,8 +170,10 @@ function Signup({ onSwitchToLogin }) {
             />
           </div>
 
-          <button type="submit" className="btn btn-primary btn-block" style={{ marginTop: '8px' }}>
-            Register as {role === 'creator' ? 'Reel Creator' : role === 'business' ? 'Business Promoter' : 'Explorer'}
+          <button type="submit" className="btn btn-primary btn-block" style={{ marginTop: '8px' }} disabled={isSubmitting}>
+            {isSubmitting
+              ? 'Creating account...'
+              : `Register as ${role === 'creator' ? 'Reel Creator' : role === 'business' ? 'Business Promoter' : 'Explorer'}`}
           </button>
         </form>
 

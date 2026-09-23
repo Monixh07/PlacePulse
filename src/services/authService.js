@@ -10,6 +10,9 @@ function configurationError() {
 function authMessage(error, fallback = 'Unable to complete authentication') {
   const message = error?.message?.toLowerCase() || ''
 
+  if (error?.status === 429 || error?.code === 'over_email_send_rate_limit' || message.includes('rate limit') || message.includes('too many requests')) {
+    return 'Too many signup requests have been made recently. Please wait a while before trying again.'
+  }
   if (message.includes('already registered') || message.includes('already exists')) {
     return 'Email already registered. Please login instead.'
   }
@@ -18,9 +21,6 @@ function authMessage(error, fallback = 'Unable to complete authentication') {
   }
   if (message.includes('email not confirmed')) {
     return 'Please confirm your email address before logging in.'
-  }
-  if (message.includes('too many requests') || message.includes('rate limit')) {
-    return 'Too many attempts. Please wait a few minutes before trying again.'
   }
   if (message.includes('password')) {
     return error.message

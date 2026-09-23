@@ -1,4 +1,23 @@
 const STORAGE_KEY = 'placepulse_data'
+const STORAGE_VERSION_KEY = 'placepulse_storage_version'
+const LEGACY_CLEANUP_VERSION = 2
+const APPLICATION_COLLECTIONS = [
+  'users',
+  'places',
+  'campaigns',
+  'applications',
+  'agreements',
+  'reels',
+  'comments',
+  'likes',
+  'saves',
+  'ratings',
+  'visitedPlaces',
+  'notifications',
+  'messages',
+  'creatorStats',
+  'businessStats',
+]
 
 export class StorageQuotaError extends Error {
   constructor() {
@@ -29,14 +48,27 @@ export function saveData(data) {
 }
 
 export function initializeData(initialData) {
-  const existingData = getData()
+  let existingData = getData()
 
   if (!existingData) {
-    saveData(initialData)
+    existingData = { ...initialData, currentUser: null }
+    saveData(existingData)
+    localStorage.setItem(STORAGE_VERSION_KEY, String(LEGACY_CLEANUP_VERSION))
     return
   }
 
   let updated = false
+  const storageVersion = Number.parseInt(localStorage.getItem(STORAGE_VERSION_KEY) || '0', 10)
+  if (Number.isNaN(storageVersion) || storageVersion < LEGACY_CLEANUP_VERSION) {
+    APPLICATION_COLLECTIONS.forEach((collection) => {
+      existingData[collection] = []
+    })
+    existingData.currentUser = null
+    saveData(existingData)
+    localStorage.setItem(STORAGE_VERSION_KEY, String(LEGACY_CLEANUP_VERSION))
+    return
+  }
+
   // Authentication is owned by Supabase. Remove only legacy auth fields while
   // leaving all non-authentication collections and their data untouched.
   if (Array.isArray(existingData.users)) {
@@ -47,8 +79,8 @@ export function initializeData(initialData) {
       }
     })
   }
-  if (Object.prototype.hasOwnProperty.call(existingData, 'currentUser')) {
-    delete existingData.currentUser
+  if (existingData.currentUser !== null) {
+    existingData.currentUser = null
     updated = true
   }
 
