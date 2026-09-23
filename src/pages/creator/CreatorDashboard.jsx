@@ -113,13 +113,17 @@ function CreatorDashboard({ onOpenPlace }) {
   // Free Promotion Submit
   const handleFreePromoSubmit = (e) => {
     e.preventDefault()
-    if (!freePromoPlaceId || !freePromoCaption.trim()) return
+    if (!freePromoPlaceId || !freePromoMediaUrl || !freePromoCaption.trim()) {
+      setActionMessage('Select a place, upload media, and add a caption before publishing.')
+      setTimeout(() => setActionMessage(''), 4000)
+      return
+    }
 
     addReel({
       creatorId: currentUser.id,
       placeId: freePromoPlaceId,
       caption: freePromoCaption.trim(),
-      mediaUrl: freePromoMediaUrl || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800',
+      mediaUrl: freePromoMediaUrl,
     })
 
     setShowFreePromoModal(false)
@@ -143,13 +147,17 @@ function CreatorDashboard({ onOpenPlace }) {
   // Submit Campaign Reel
   const handleCampaignReelSubmit = (e) => {
     e.preventDefault()
-    if (!activeUploadCampaign || !campCaption.trim()) return
+    if (!activeUploadCampaign || !campMediaUrl || !campCaption.trim()) {
+      setActionMessage('Upload campaign media and add a caption before submitting.')
+      setTimeout(() => setActionMessage(''), 4000)
+      return
+    }
 
     submitCampaignReel(
       activeUploadCampaign.id,
       currentUser.id,
       activeUploadCampaign.placeId,
-      campMediaUrl || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800',
+      campMediaUrl,
       campCaption.trim()
     )
 

@@ -68,13 +68,17 @@ export function getReelById(id) {
 }
 
 export function addReel({ creatorId, placeId, mediaUrl, caption, campaignId = null }) {
+  if (!creatorId || !placeId || !mediaUrl) {
+    throw new Error('A reel requires a creator, place, and uploaded media.')
+  }
+
   const data = getData()
   const newReel = {
     id: 'reel_' + Date.now(),
     creatorId,
     placeId,
     campaignId,
-    mediaUrl: mediaUrl || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800',
+    mediaUrl,
     caption: caption || '',
     likeCount: 0,
     commentCount: 0,
@@ -477,22 +481,26 @@ export function markVisitCompleted(campaignId, creatorId, placeId) {
 }
 
 export function submitCampaignReel(campaignId, creatorId, placeId, mediaUrl, caption) {
+  const reel = addReel({ creatorId, placeId, mediaUrl, caption, campaignId })
+
+  // Re-read after addReel so the campaign update cannot overwrite the saved reel.
   const data = getData()
   data.campaigns = data.campaigns || []
-
-  // Add reel
-  const reel = addReel({ creatorId, placeId, mediaUrl, caption, campaignId })
 
   // Update campaign
   const camp = data.campaigns.find((c) => c.id === campaignId)
   if (camp) {
     camp.status = 'Reel Uploaded'
     camp.reelId = reel.id
-    addNotification(camp.businessId, 'Reel Uploaded', `Creator has uploaded the promotional reel for "${camp.title}".`)
   }
 
   saveData(data)
   notifyChange()
+
+  if (camp) {
+    addNotification(camp.businessId, 'Reel Uploaded', `Creator has uploaded the promotional reel for "${camp.title}".`)
+  }
+
   return reel
 }
 
