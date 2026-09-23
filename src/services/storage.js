@@ -1,5 +1,12 @@
 const STORAGE_KEY = 'placepulse_data'
 
+export class StorageQuotaError extends Error {
+  constructor() {
+    super('PlacePulse storage is full. Remove an older upload or choose smaller media files.')
+    this.name = 'StorageQuotaError'
+  }
+}
+
 export function getData() {
   const storedData = localStorage.getItem(STORAGE_KEY)
 
@@ -11,7 +18,14 @@ export function getData() {
 }
 
 export function saveData(data) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+  } catch (error) {
+    if (error?.name === 'QuotaExceededError') {
+      throw new StorageQuotaError()
+    }
+    throw error
+  }
 }
 
 export function initializeData(initialData) {
@@ -23,6 +37,21 @@ export function initializeData(initialData) {
   }
 
   let updated = false
+  // Authentication is owned by Supabase. Remove only legacy auth fields while
+  // leaving all non-authentication collections and their data untouched.
+  if (Array.isArray(existingData.users)) {
+    existingData.users.forEach((user) => {
+      if (Object.prototype.hasOwnProperty.call(user, 'password')) {
+        delete user.password
+        updated = true
+      }
+    })
+  }
+  if (Object.prototype.hasOwnProperty.call(existingData, 'currentUser')) {
+    delete existingData.currentUser
+    updated = true
+  }
+
   Object.keys(initialData).forEach((key) => {
     if (existingData[key] === undefined) {
       existingData[key] = initialData[key]

@@ -1,96 +1,164 @@
-import { getData, saveData } from './storage'
+import { isSupabaseConfigured, supabase } from './supabaseClient'
 
-export function signup(userData) {
-  const data = getData()
-  data.users = data.users || []
+function configurationError() {
+  return {
+    success: false,
+    message: 'Authentication is not configured. Add the Supabase URL and anon key to .env.local.',
+  }
+}
+
+function authMessage(error, fallback = 'Unable to complete authentication') {
+  const message = error?.message?.toLowerCase() || ''
+
+  if (message.includes('already registered') || message.includes('already exists')) {
+    return 'Email already registered. Please login instead.'
+  }
+  if (message.includes('invalid login credentials')) {
+    return 'Invalid email or password.'
+  }
+  if (message.includes('email not confirmed')) {
+    return 'Please confirm your email address before logging in.'
+  }
+  if (message.includes('password')) {
+    return error.message
+  }
+
+  return error?.message || fallback
+}
+
+function profileFromRow(row, authUser) {
+  if (!row) return null
+
+  return {
+    ...row,
+    id: row.id || authUser.id,
+    name: row.name || authUser.user_metadata?.name || 'User',
+    username: row.username || authUser.user_metadata?.username || authUser.email.split('@')[0],
+    email: authUser.email,
+    role: row.role || authUser.user_metadata?.role || 'normal',
+    phone: row.phone || '',
+    bio: row.bio || '',
+    profileImage: row.profile_image || row.profileImage || '',
+    followers: row.followers || 0,
+    following: row.following || 0,
+    creatorScore: row.creator_score || 0,
+    earnings: row.earnings || 0,
+  }
+}
+
+export async function getProfile(authUser) {
+  if (!authUser || !supabase) return null
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', authUser.id)
+    .maybeSingle()
+
+  if (error) throw error
+  return profileFromRow(data, authUser)
+}
+
+export async function signup(userData) {
+  if (!isSupabaseConfigured || !supabase) return configurationError()
 
   const cleanEmail = userData.email?.trim().toLowerCase()
   const cleanUsername = (
     userData.username?.trim().toLowerCase() ||
-    cleanEmail.split('@')[0]
+    cleanEmail?.split('@')[0] ||
+    ''
   ).replace(/[^a-z0-9_]/g, '')
 
-  const existingEmail = data.users.find((user) => user.email === cleanEmail)
-  if (existingEmail) {
-    return {
-      success: false,
-      message: 'Email already registered. Please login instead.',
-    }
+  const { data, error } = await supabase.auth.signUp({
+    email: cleanEmail,
+    password: userData.password,
+    options: {
+      data: {
+        name: userData.name?.trim() || 'User',
+        username: cleanUsername,
+        role: userData.role || 'normal',
+      },
+    },
+  })
+
+  if (error) return { success: false, message: authMessage(error) }
+  if (!data.user) return { success: false, message: 'Unable to create your account.' }
+  if (data.user.identities && data.user.identities.length === 0) {
+    return { success: false, message: 'Email already registered. Please login instead.' }
   }
 
-  const existingUsername = data.users.find((user) => user.username === cleanUsername)
-  if (existingUsername) {
-    return {
-      success: false,
-      message: 'Username is already taken. Please choose another.',
-    }
-  }
-
-  const newUser = {
-    id: 'user_' + Date.now().toString(),
+  const profile = {
+    id: data.user.id,
     name: userData.name?.trim() || 'User',
     username: cleanUsername,
     email: cleanEmail,
-    password: userData.password,
     role: userData.role || 'normal',
     phone: userData.phone?.trim() || '',
-    bio: userData.bio?.trim() || (userData.role === 'creator' ? 'Travel Creator on PlacePulse' : userData.role === 'business' ? 'Business & Tourism Promoter' : 'Travel Explorer'),
-    profileImage: userData.profileImage || '',
-    // Initial zero statistics for all new accounts
+    bio: userData.bio?.trim() || '',
+    profile_image: userData.profileImage || '',
     followers: 0,
     following: 0,
-    creatorScore: userData.role === 'creator' ? 75 : 0,
+    creator_score: userData.role === 'creator' ? 75 : 0,
     earnings: 0,
-    createdAt: new Date().toISOString(),
   }
 
-  data.users.push(newUser)
-  data.currentUser = newUser
-  saveData(data)
+  const { data: savedProfile, error: profileError } = await supabase
+    .from('profiles')
+    .upsert(profile, { onConflict: 'id' })
+    .select()
+    .single()
+
+  if (profileError) {
+    return { success: false, message: authMessage(profileError, 'Account created, but your profile could not be saved.') }
+  }
 
   return {
     success: true,
-    user: newUser,
+    user: data.session ? profileFromRow(savedProfile, data.user) : null,
+    requiresEmailConfirmation: !data.session,
   }
 }
 
-export function login(email, password) {
-  const data = getData()
-  const cleanEmail = email?.trim().toLowerCase()
+export async function login(email, password) {
+  if (!isSupabaseConfigured || !supabase) return configurationError()
 
-  const user = (data.users || []).find(
-    (item) => item.email === cleanEmail && item.password === password
-  )
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: email?.trim().toLowerCase(),
+    password,
+  })
 
-  if (!user) {
-    return {
-      success: false,
-      message: 'Invalid email or password',
+  if (error) return { success: false, message: authMessage(error, 'Invalid email or password.') }
+
+  try {
+    const profile = await getProfile(data.user)
+    if (!profile) {
+      await supabase.auth.signOut()
+      return { success: false, message: 'Your account profile is missing. Please contact an administrator.' }
     }
-  }
-
-  data.currentUser = user
-  saveData(data)
-
-  return {
-    success: true,
-    user,
+    return { success: true, user: profile }
+  } catch (profileError) {
+    await supabase.auth.signOut()
+    return { success: false, message: authMessage(profileError, 'Unable to load your profile.') }
   }
 }
 
-export function saveCurrentUser(user) {
-  const data = getData()
-  data.currentUser = user
-  saveData(data)
+export async function restoreSession() {
+  if (!isSupabaseConfigured || !supabase) {
+    return { user: null, error: configurationError().message }
+  }
+
+  const { data, error } = await supabase.auth.getSession()
+  if (error || !data.session) return { user: null, error: error ? authMessage(error) : null }
+
+  try {
+    return { user: await getProfile(data.session.user), error: null }
+  } catch (profileError) {
+    return { user: null, error: authMessage(profileError, 'Unable to load your profile.') }
+  }
 }
 
-export function getCurrentUser() {
-  const data = getData()
-  return data?.currentUser || null
-}
-
-export function clearCurrentUser() {
-  const data = getData()
-  data.currentUser = null
-  saveData(data)
+export async function logout() {
+  if (!supabase) return { success: true }
+  const { error } = await supabase.auth.signOut()
+  return error ? { success: false, message: authMessage(error) } : { success: true }
 }

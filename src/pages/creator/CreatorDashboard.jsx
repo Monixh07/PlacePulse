@@ -11,6 +11,7 @@ import {
   submitCampaignReel,
   addReel,
   addPlace,
+  deletePlace,
   getVisitedPlaces,
   updateUserProfile,
 } from '../../services/dataService'
@@ -19,6 +20,8 @@ import EmptyState from '../../components/common/EmptyState'
 import Modal from '../../components/common/Modal'
 import CommentsModal from '../../components/common/CommentsModal'
 import MediaUpload from '../../components/common/MediaUpload'
+import { PLACE_CATEGORY_OPTIONS } from '../../constants/placeCategories'
+import { StorageQuotaError } from '../../services/storage'
 import {
   Video,
   Briefcase,
@@ -58,6 +61,7 @@ function CreatorDashboard({ onOpenPlace }) {
   const [newPlaceName, setNewPlaceName] = useState('')
   const [newPlaceLocation, setNewPlaceLocation] = useState('')
   const [newPlaceCategory, setNewPlaceCategory] = useState('Nature')
+  const [customNewPlaceCategory, setCustomNewPlaceCategory] = useState('')
   const [newPlaceCoverImage, setNewPlaceCoverImage] = useState('')
 
   // Campaign Reel Upload Modal
@@ -73,6 +77,7 @@ function CreatorDashboard({ onOpenPlace }) {
 
   const [activeCommentReel, setActiveCommentReel] = useState(null)
   const [actionMessage, setActionMessage] = useState('')
+  const [publishMessage, setPublishMessage] = useState('')
 
   const loadCreatorData = () => {
     if (!currentUser) return
@@ -119,29 +124,47 @@ function CreatorDashboard({ onOpenPlace }) {
   // Free Promotion Submit
   const handleFreePromoSubmit = (e) => {
     e.preventDefault()
-    if (!freePromoMediaUrl || !freePromoCaption.trim() || (freePromoMode === 'existing' && !freePromoPlaceId) || (freePromoMode === 'new' && (!newPlaceName.trim() || !newPlaceLocation.trim()))) {
-      setActionMessage('Choose an existing place or add a new place, then upload media and add a caption.')
+    if (!freePromoMediaUrl || !freePromoCaption.trim() || (freePromoMode === 'existing' && !freePromoPlaceId) || (freePromoMode === 'new' && (!newPlaceName.trim() || !newPlaceLocation.trim() || (newPlaceCategory === 'Other' && !customNewPlaceCategory.trim())))) {
+      const message = 'Choose a place, upload reel media, and add a caption before publishing.'
+      setPublishMessage(message)
+      setActionMessage(message)
       setTimeout(() => setActionMessage(''), 4000)
       return
     }
 
     let placeId = freePromoPlaceId
-    if (freePromoMode === 'new') {
-      const place = addPlace({
-        name: newPlaceName.trim(),
-        location: newPlaceLocation.trim(),
-        category: newPlaceCategory,
-        coverImage: newPlaceCoverImage,
-      }, null, { creatorId: currentUser.id })
-      placeId = place.id
-    }
+    let createdPlaceId = null
+    try {
+      if (freePromoMode === 'new') {
+        const place = addPlace({
+          name: newPlaceName.trim(),
+          location: newPlaceLocation.trim(),
+          category: newPlaceCategory === 'Other' ? customNewPlaceCategory.trim() : newPlaceCategory,
+          coverImage: newPlaceCoverImage,
+        }, null, { creatorId: currentUser.id })
+        placeId = place.id
+        createdPlaceId = place.id
+      }
 
-    addReel({
-      creatorId: currentUser.id,
-      placeId,
-      caption: freePromoCaption.trim(),
-      mediaUrl: freePromoMediaUrl,
-    })
+      addReel({
+        creatorId: currentUser.id,
+        placeId,
+        caption: freePromoCaption.trim(),
+        mediaUrl: freePromoMediaUrl,
+      })
+    } catch (error) {
+      if (createdPlaceId) {
+        deletePlace(createdPlaceId)
+      }
+      setActionMessage(error instanceof StorageQuotaError
+        ? error.message
+        : 'The reel could not be saved. Please try again with smaller media.')
+      setPublishMessage(error instanceof StorageQuotaError
+        ? error.message
+        : 'The reel could not be saved. Please try again with smaller media.')
+      setTimeout(() => setActionMessage(''), 5000)
+      return
+    }
 
     setShowFreePromoModal(false)
     setFreePromoCaption('')
@@ -151,6 +174,8 @@ function CreatorDashboard({ onOpenPlace }) {
     setNewPlaceName('')
     setNewPlaceLocation('')
     setNewPlaceCoverImage('')
+    setCustomNewPlaceCategory('')
+    setPublishMessage('')
     setActionMessage('Free promotional reel published successfully!')
     setTimeout(() => setActionMessage(''), 4000)
   }
@@ -681,7 +706,7 @@ function CreatorDashboard({ onOpenPlace }) {
       {/* Free Promotion Modal */}
       {showFreePromoModal && (
         <Modal title="Promote a Place (Free Reel)" onClose={() => setShowFreePromoModal(false)}>
-          <form onSubmit={handleFreePromoSubmit}>
+          <form onSubmit={handleFreePromoSubmit} noValidate>
             <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', marginBottom: '14px' }}>
               Choose any place to promote. It will appear on your profile, the place details page, and add to your visited places portfolio!
             </p>
@@ -720,9 +745,22 @@ function CreatorDashboard({ onOpenPlace }) {
               <div className="input-group">
                 <label>Category</label>
                 <select value={newPlaceCategory} onChange={(e) => setNewPlaceCategory(e.target.value)}>
-                  <option>Nature</option><option>Beach</option><option>Heritage</option><option>Mountain</option><option>Cafe</option>
+                  {PLACE_CATEGORY_OPTIONS.map((category) => (
+                    <option key={category} value={category}>{category}</option>
+                  ))}
                 </select>
-              </div>
+                </div>
+                {newPlaceCategory === 'Other' && (
+                  <div className="input-group">
+                    <label>Specify Category</label>
+                    <input
+                      value={customNewPlaceCategory}
+                      onChange={(e) => setCustomNewPlaceCategory(e.target.value)}
+                      placeholder="e.g. Art Gallery"
+                      required
+                    />
+                  </div>
+                )}
               <div className="input-group">
                 <label>Cover Image (optional)</label>
                 <MediaUpload value={newPlaceCoverImage} onChange={setNewPlaceCoverImage} accept="image/*" label="Upload a cover photo" />
@@ -750,6 +788,12 @@ function CreatorDashboard({ onOpenPlace }) {
                 required
               />
             </div>
+
+            {publishMessage && (
+              <p role="alert" style={{ color: 'var(--color-danger)', fontSize: '13px', marginTop: '10px' }}>
+                {publishMessage}
+              </p>
+            )}
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '16px' }}>
               <button

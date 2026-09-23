@@ -3,6 +3,7 @@ import { Search, Grid, Map as MapIcon, ArrowRight } from 'lucide-react'
 import { getPublicPlaces } from '../services/dataService'
 import PlaceCard from '../components/common/PlaceCard'
 import EmptyState from '../components/common/EmptyState'
+import { PLACE_CATEGORY_OPTIONS } from '../constants/placeCategories'
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
 import L from 'leaflet'
 
@@ -17,7 +18,7 @@ const defaultMarkerIcon = L.icon({
   shadowSize: [41, 41],
 })
 
-const CATEGORIES = ['All', 'Beach', 'Nature', 'Heritage', 'Mountain', 'Cafe']
+const CATEGORIES = ['All', ...PLACE_CATEGORY_OPTIONS]
 
 function Explore({ onOpenPlace }) {
   const [places, setPlaces] = useState([])

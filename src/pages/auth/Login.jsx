@@ -9,10 +9,10 @@ function Login({ onSwitchToSignup }) {
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
 
-    const result = login(
+    const result = await login(
       email.trim().toLowerCase(),
       password
     )
@@ -67,13 +67,6 @@ function Login({ onSwitchToSignup }) {
             Log In
           </button>
         </form>
-
-        <div style={{ marginTop: '16px', padding: '10px', background: 'var(--color-surface)', borderRadius: '8px', fontSize: '12px', color: 'var(--color-text-secondary)', textAlign: 'left' }}>
-          <strong style={{ display: 'block', marginBottom: '4px', color: 'var(--color-text)' }}>Demo Credentials:</strong>
-          <div>• Creator: <code>creator@test.com</code> / <code>password123</code></div>
-          <div>• Business: <code>business@test.com</code> / <code>password123</code></div>
-          <div>• Explorer: <code>explorer@test.com</code> / <code>password123</code></div>
-        </div>
 
         <div className="auth-footer">
           Don&apos;t have an account?

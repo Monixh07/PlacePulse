@@ -1,51 +1,76 @@
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
 import {
-  signup as signupUser,
+  getProfile,
   login as loginUser,
-  saveCurrentUser,
-  getCurrentUser,
-  clearCurrentUser,
+  logout as logoutUser,
+  restoreSession,
+  signup as signupUser,
 } from '../services/authService'
+import { supabase } from '../services/supabaseClient'
+import Loading from '../components/common/Loading'
 
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-  const [currentUser, setCurrentUser] = useState(getCurrentUser)
+  const [currentUser, setCurrentUser] = useState(null)
+  const [loading, setLoading] = useState(true)
 
-  function login(email, password) {
-    const result = loginUser(email, password)
+  useEffect(() => {
+    let mounted = true
 
-    if (result.success) {
-      setCurrentUser(result.user)
-      saveCurrentUser(result.user)
+    restoreSession().then(({ user }) => {
+      if (mounted) {
+        setCurrentUser(user)
+        setLoading(false)
+      }
+    })
+
+    if (!supabase) return () => { mounted = false }
+
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT' || !session) {
+        setCurrentUser(null)
+        setLoading(false)
+        return
+      }
+
+      // Do not await Supabase queries inside the auth callback.
+      setTimeout(() => {
+        getProfile(session.user)
+          .then((profile) => mounted && setCurrentUser(profile))
+          .catch(() => mounted && setCurrentUser(null))
+          .finally(() => mounted && setLoading(false))
+      }, 0)
+    })
+
+    return () => {
+      mounted = false
+      listener.subscription.unsubscribe()
     }
+  }, [])
 
+  async function login(email, password) {
+    const result = await loginUser(email, password)
+    if (result.success) setCurrentUser(result.user)
     return result
   }
-  function signup(userData) {
-  const result = signupUser(userData)
 
-  if (result.success) {
-    setCurrentUser(result.user)
-    saveCurrentUser(result.user)
+  async function signup(userData) {
+    const result = await signupUser(userData)
+    if (result.success && result.user) setCurrentUser(result.user)
+    return result
   }
 
-  return result
-}
-  function logout() {
-    clearCurrentUser()
-    setCurrentUser(null)
+  async function logout() {
+    const result = await logoutUser()
+    if (result.success) setCurrentUser(null)
+    return result
   }
+
+  if (loading) return <Loading />
 
   return (
-    <AuthContext.Provider
-      value={{
-        currentUser,
-        signup,
-        login,
-        logout,
-    }}
-    >
+    <AuthContext.Provider value={{ currentUser, signup, login, logout }}>
       {children}
     </AuthContext.Provider>
   )

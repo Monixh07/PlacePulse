@@ -17,6 +17,7 @@ import {
 import EmptyState from '../../components/common/EmptyState'
 import Modal from '../../components/common/Modal'
 import MediaUpload from '../../components/common/MediaUpload'
+import { PLACE_CATEGORY_OPTIONS } from '../../constants/placeCategories'
 import {
   PlusCircle,
   Briefcase,
@@ -43,6 +44,7 @@ function BusinessDashboard({ onOpenPlace }) {
   const [editingPlaceId, setEditingPlaceId] = useState(null)
   const [placeName, setPlaceName] = useState('')
   const [placeCategory, setPlaceCategory] = useState('Beach')
+  const [customPlaceCategory, setCustomPlaceCategory] = useState('')
   const [placeLocation, setPlaceLocation] = useState('')
   const [placeLat, setPlaceLat] = useState('12.9141')
   const [placeLng, setPlaceLng] = useState('74.8560')
@@ -118,6 +120,7 @@ function BusinessDashboard({ onOpenPlace }) {
     setEditingPlaceId(null)
     setPlaceName('')
     setPlaceCategory('Beach')
+    setCustomPlaceCategory('')
     setPlaceLocation('')
     setPlaceLat('12.9141')
     setPlaceLng('74.8560')
@@ -130,7 +133,9 @@ function BusinessDashboard({ onOpenPlace }) {
   const handleOpenEditPlace = (p) => {
     setEditingPlaceId(p.id)
     setPlaceName(p.name || '')
-    setPlaceCategory(p.category || 'Beach')
+    const category = p.category || 'Beach'
+    setPlaceCategory(PLACE_CATEGORY_OPTIONS.includes(category) ? category : 'Other')
+    setCustomPlaceCategory(PLACE_CATEGORY_OPTIONS.includes(category) ? '' : category)
     setPlaceLocation(p.location || '')
     setPlaceLat(p.latitude?.toString() || '12.9141')
     setPlaceLng(p.longitude?.toString() || '74.8560')
@@ -143,10 +148,15 @@ function BusinessDashboard({ onOpenPlace }) {
   const handlePlaceSubmit = (e) => {
     e.preventDefault()
     if (!placeName.trim() || !placeLocation.trim()) return
+    const finalCategory = placeCategory === 'Other' ? customPlaceCategory.trim() : placeCategory
+    if (!finalCategory) {
+      showToast('Specify a category when Other is selected.')
+      return
+    }
 
     const payload = {
       name: placeName.trim(),
-      category: placeCategory,
+      category: finalCategory,
       location: placeLocation.trim(),
       latitude: parseFloat(placeLat) || 12.9141,
       longitude: parseFloat(placeLng) || 74.8560,
@@ -878,14 +888,24 @@ function BusinessDashboard({ onOpenPlace }) {
                   value={placeCategory}
                   onChange={(e) => setPlaceCategory(e.target.value)}
                 >
-                  <option value="Beach">Beach</option>
-                  <option value="Nature">Nature</option>
-                  <option value="Heritage">Heritage</option>
-                  <option value="Mountain">Mountain</option>
-                  <option value="Cafe">Cafe</option>
-                  <option value="Adventure">Adventure</option>
+                  {PLACE_CATEGORY_OPTIONS.map((category) => (
+                    <option key={category} value={category}>{category}</option>
+                  ))}
                 </select>
               </div>
+
+              {placeCategory === 'Other' && (
+                <div className="input-group">
+                  <label>Specify Category</label>
+                  <input
+                    type="text"
+                    value={customPlaceCategory}
+                    onChange={(e) => setCustomPlaceCategory(e.target.value)}
+                    placeholder="e.g. Art Gallery"
+                    required
+                  />
+                </div>
+              )}
 
               <div className="input-group">
                 <label>City & State Location</label>

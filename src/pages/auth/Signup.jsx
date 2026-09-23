@@ -16,7 +16,7 @@ function Signup({ onSwitchToLogin }) {
   const [profileImage, setProfileImage] = useState('')
   const [message, setMessage] = useState('')
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
 
     if (name.trim().length < 2) {
@@ -29,7 +29,7 @@ function Signup({ onSwitchToLogin }) {
       return
     }
 
-    const result = signup({
+    const result = await signup({
       name: name.trim(),
       username: username.trim(),
       email: email.trim().toLowerCase(),
@@ -41,7 +41,9 @@ function Signup({ onSwitchToLogin }) {
     })
 
     if (result.success) {
-      setMessage('')
+      setMessage(result.requiresEmailConfirmation
+        ? 'Account created. Check your email to confirm your address, then log in.'
+        : '')
     } else {
       setMessage(result.message)
     }
